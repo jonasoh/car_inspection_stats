@@ -6,7 +6,6 @@ library(data.table)
 library(janitor)
 library(stringr)
 #library(ggplot2)
-library(dplyr)
 library(tidyr)
 
 # load and clean data
@@ -135,20 +134,16 @@ server <- function(input, output) {
     output$model_table <- renderTable({
         model_dt <- stats_by_fault[brand_and_model_series==input$car_model & registration_year==input$model_reg_year]
         avg_dt <- avg_stats_by_fault[registration_year==input$model_reg_year]
-        model_dt_long <- model_dt %>% pivot_longer(fault_pct) %>%
-            select(c(main_fault_object, value, number_of_inspections)) %>%
-            mutate(value=value*100) %>%
-            group_by(main_fault_object) %>%
-            summarize(model_value=weighted.mean(value, number_of_inspections))
-        avg_dt_long <- avg_dt %>% pivot_longer(fault_pct)%>%
-            select(c(main_fault_object, value, number_of_inspections)) %>%
-            mutate(value=value*100) %>%
-            group_by(main_fault_object) %>%
-            summarize(avg_value=weighted.mean(value, number_of_inspections))
-        model_table <- model_dt_long %>% left_join(avg_dt_long, by="main_fault_object")
-        model_table <- model_table %>% mutate(diff=if_else(model_value < avg_value, 
-                                                           str_c(round(1-(model_value / avg_value), 2)*100, '% better'), 
-                                                           str_c(round(1-(avg_value / model_value), 2)*100, '% worse')))
+        model_dt <- model_dt[,.(main_fault_object, fault_pct, number_of_inspections)
+                             ][, fault_pct := fault_pct * 100
+                             ][, .(model_value=weighted.mean(fault_pct, number_of_inspections)), by='main_fault_object']
+        avg_dt <- avg_dt[,.(main_fault_object, fault_pct, number_of_inspections)
+                         ][, fault_pct := fault_pct * 100
+                         ][, .(model_value=weighted.mean(fault_pct, number_of_inspections)), by='main_fault_object']
+        model_table <- model_dt[avg_dt, on="main_fault_object"]
+        names(model_table)[3] <- 'avg_value'
+        model_table[, diff := fcase(model_value < avg_value, str_c(round(1-(model_value / avg_value), 2)*100, '% better'),
+                                    model_value >= avg_value, str_c(round(1-(avg_value / model_value), 2)*100, '% worse'))]
         names(model_table) <- c('Fault type', 'This model (%)', 'Average (%)', 'This model compared to average')
         model_table
     })
