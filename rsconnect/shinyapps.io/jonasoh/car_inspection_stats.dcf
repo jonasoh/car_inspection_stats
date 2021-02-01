@@ -1,0 +1,12 @@
+name: car_inspection_stats
+title: car_inspection_stats
+username:
+account: jonasoh
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3553942
+bundleId: 4163509
+url: https://jonasoh.shinyapps.io/car_inspection_stats/
+when: 1612104165.30685
+asMultiple: FALSE
+asStatic: FALSE
