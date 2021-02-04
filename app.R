@@ -51,13 +51,14 @@ stats_model_year <- stats[main_fault_object %in% model_related,
                                 by=.(brand_and_model_series, registration_year)]
 
 stats_by_fault <- stats[, .(fault_pct=sum(c(demand_for_repairs, rejections, driving_bans))/number_of_inspections[1],
-                            number_of_inspections=number_of_inspections[1]),
+                            number_of_inspections=number_of_inspections[1],
+                            brand=brand[1],
+                            average_mileage=average_mileage),
                           by=.(year_of_inspection, brand_and_model_series, registration_year, main_fault_object)]
 
 avg_stats_by_fault <- stats_by_fault[, .(fault_pct=weighted.mean(fault_pct, number_of_inspections),
                                          number_of_inspections=sum(number_of_inspections)),
                                      by=.(year_of_inspection, registration_year, main_fault_object)]
-
 
 stats_age <- stats[main_fault_object %in% model_related, 
                    .(fault_pct=sum(c(demand_for_repairs, rejections, driving_bans))/number_of_inspections[1],
@@ -69,6 +70,13 @@ stats_age <- stats[main_fault_object %in% model_related,
                           number_of_inspections=sum(number_of_inspections)), 
                       by=.(brand_and_model_series, vehicle_age)]
 
+brand_stats_by_age <- stats_by_fault[, .(fault_pct=weighted.mean(fault_pct, number_of_inspections),
+                                         average_mileage=weighted.mean(average_mileage, number_of_inspections)),
+                                     by=.(brand, registration_year)
+                                     ][, .(rank=frank(fault_pct), brand=brand,
+                                       average_mileage=as.integer(average_mileage)),
+                                       by=.(registration_year)]
+
 # dashboard ui
 header <- dashboardHeader(title="Car inspection statistics")
 
@@ -76,7 +84,8 @@ sidebar <- dashboardSidebar(
     sidebarMenu(id="sidebar", 
         menuItem("By model and year", tabName="model_year", icon=icon("car")),
         menuItem("By age", tabName="by_age", icon=icon("car")),
-        menuItem("Car model overview", tabName="model_overview", icon=icon("car"))
+        menuItem("Car model overview", tabName="model_overview", icon=icon("car")),
+        menuItem("Brand leaderboard", tabName="brand_leaderboard", icon=icon("car"))
     )
 )
 
@@ -103,6 +112,12 @@ body <- dashboardBody(
                             min=min(years), max=max(years), value=min(years),
                             step=1, round=T, sep='', ticks=F))),
             fluidRow(tableOutput('model_table'))
+        ),
+        tabItem(tabName='brand_leaderboard', fluidRow(
+            box(sliderInput('brand_model_reg_year', 'Registration year:',
+                            min=min(years), max=max(years), value=min(years),
+                            step=1, round=T, sep='', ticks=F))),
+            fluidRow(DT::dataTableOutput('brand_leaderboard_table'))
         )
     )
 )
@@ -147,6 +162,13 @@ server <- function(input, output) {
         names(model_table) <- c('Fault type', 'This model (%)', 'Average (%)', 'This model compared to average')
         model_table
     })
+    
+    output$brand_leaderboard_table <- DT::renderDataTable({
+        dt <- brand_stats_by_age[registration_year==input$brand_model_reg_year]
+        dt[,-1]
+    }, 
+    options=list(pageLength=50, order=list(list(0, 'asc'))), 
+    server=F, rownames=F)
 }
 
 # run the application 
