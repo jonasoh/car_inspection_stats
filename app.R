@@ -42,12 +42,12 @@ cars <- sort(unique(stats$brand_and_model_series))
 
 stats_model_year <- stats[main_fault_object %in% model_related, 
                           .(fault_pct=sum(c(demand_for_repairs, rejections, driving_bans))/number_of_inspections[1],
-                            average_mileage=average_mileage[1],
+                            average_mileage=average_mileage[1], brand=brand[1],
                             number_of_inspections=number_of_inspections[1]), 
                           by=.(year_of_inspection, brand_and_model_series, registration_year)
                           ][, .(fault_pct=round(weighted.mean(fault_pct, number_of_inspections), 3),
                                 average_mileage=as.integer(weighted.mean(average_mileage, number_of_inspections)),
-                                number_of_inspections=sum(number_of_inspections)), 
+                                number_of_inspections=sum(number_of_inspections), brand=brand[1]), 
                                 by=.(brand_and_model_series, registration_year)]
 
 stats_by_fault <- stats[, .(fault_pct=sum(c(demand_for_repairs, rejections, driving_bans))/number_of_inspections[1],
@@ -70,8 +70,8 @@ stats_age <- stats[main_fault_object %in% model_related,
                           number_of_inspections=sum(number_of_inspections)), 
                       by=.(brand_and_model_series, vehicle_age)]
 
-brand_stats_by_age <- stats_by_fault[, .(fault_pct=weighted.mean(fault_pct, number_of_inspections),
-                                         average_mileage=weighted.mean(average_mileage, number_of_inspections)),
+brand_stats_by_age <- stats_model_year[, .(fault_pct=weighted.mean(fault_pct, number_of_inspections),
+                                         average_mileage=weighted.mean(as.numeric(average_mileage), number_of_inspections)),
                                      by=.(brand, registration_year)
                                      ][, .(rank=frank(fault_pct), brand=brand,
                                        average_mileage=as.integer(average_mileage)),
@@ -130,7 +130,7 @@ server <- function(input, output) {
         dt <- stats_model_year[registration_year==input$reg_year]
         dt$fault_pct <- dt$fault_pct * 100
                          
-        names(dt) <- c('Model', 'Year', 'Fault%', 'Avg. mileage (km)', 'n')
+        names(dt) <- c('Model', 'Year', 'Fault%', 'Avg. mileage (km)', 'n', 'Brand')
         dt[,c(1,3:5)]
     }, 
     options=list(pageLength=200, order=list(list(1, 'asc'))), 
