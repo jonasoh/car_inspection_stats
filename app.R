@@ -82,6 +82,7 @@ header <- dashboardHeader(title="Car inspection statistics")
 
 sidebar <- dashboardSidebar(
     sidebarMenu(id="sidebar", 
+        menuItem("Page info", tabName="info", icon=icon("car")),
         menuItem("By model and year", tabName="model_year", icon=icon("car")),
         menuItem("By age", tabName="by_age", icon=icon("car")),
         menuItem("Car model overview", tabName="model_overview", icon=icon("car")),
@@ -91,7 +92,17 @@ sidebar <- dashboardSidebar(
 
 body <- dashboardBody(
     tabItems(
-        tabItem(tabName='model_year',fluidRow(
+        tabItem(tabName='info', fluidRow(
+                h1('Car inspection stats'),
+                p('This website presents Finnish car inspection stats from the', 
+                  a('Traficom Statistics Database', href='https://trafi2.stat.fi/PXWeb/pxweb/en/TraFi/TraFi__Katsastuksen_vikatilastot/?tablelist=true'),
+                  'which details the results of periodic inspections for all car models with over 100 inspected cars per year.'),
+                p('For the ranking by registration year and age, as well as for the brand leaderboard, only model-related errors which cause a demand for repair is accounted for,',
+                  'i.e., broken parking lights or slightly rusted brake discs do not affect the ratings.'),
+                p('Use the menu', icon('bars'), 'to choose which statistics to view.')
+            )
+        ),
+        tabItem(tabName='model_year', fluidRow(
             box('Fault stats by model and registration year',
                 sliderInput('reg_year', 'Registration year:',
                             min=min(years), max=max(years), value=min(years),
