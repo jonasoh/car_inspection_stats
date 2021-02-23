@@ -99,6 +99,7 @@ body <- dashboardBody(
                   'which details the results of periodic inspections for all car models with over 100 inspected cars per year.'),
                 p('For the ranking by registration year and age, as well as for the brand leaderboard, only model-related errors which cause a demand for repair is accounted for,',
                   'i.e., broken parking lights or slightly rusted brake discs do not affect the ratings.'),
+                p('As statistics are aggregated by model and fault category, some models will have over 100% fault rating. This is a necessary consequence of how the data are delivered by Traficom, and arguably the better way to present the data.'),
                 p('Use the menu', icon('bars'), 'to choose which statistics to view.')
             )
         ),
