@@ -47,3 +47,6 @@ po/*~
 rsconnect/
 
 .DS_Store
+
+# raw Traficom source data (large; see README.md for how to fetch it)
+raw_data/

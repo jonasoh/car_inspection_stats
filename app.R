@@ -3,79 +3,26 @@ library(shinydashboard)
 library(DT)
 
 library(data.table)
-library(janitor)
-library(stringr)
 #library(ggplot2)
-library(tidyr)
 
-# load and clean data
-stats <- fread('grouped_stats_per_car.csv')
-stats <- stats[`Number of inspections` > 0
-               ][, `Number of inspections` := as.integer(`Number of inspections`)
-               ][, `Demand for repairs (number of faults)` := as.integer(`Demand for repairs (number of faults)`)
-               ][, `Rejections (number of faults)` := as.integer(`Rejections (number of faults)`)
-               ][, `Driving bans (number of faults)` := as.integer(`Driving bans (number of faults)`)
-               ][, `Average mileage` := as.integer(`Average mileage`)
-               ][, `Median mileage` := as.integer(`Median mileage`)
-               ][, `Year of inspection` := as.integer(`Year of inspection`)
-               ][, `Registration year` := as.integer(`Registration year`)
-               ][, `Vehicle age` := as.integer(`Year of inspection`) - `Registration year`
-               ][, fault_pct := (`Demand for repairs (number of faults)` + `Rejections (number of faults)` +
-                     `Driving bans (number of faults)`) / `Number of inspections`
-               ][, brand := str_match(`Brand and model series`, '^(.*) - ')[,2]
-               ][, make := str_match(`Brand and model series`, ' - (.*)$')[,2]
-               ][, `Brand and model series` := str_replace(`Brand and model series`, fixed(' - '), ' ')]
+# load precomputed data (see preprocess.R)
+d <- readRDS('app_data.rds')
+stats_model_year <- d$stats_model_year
+stats_age <- d$stats_age
+model_stats_by_fault <- d$model_stats_by_fault
+avg_model_stats_by_fault <- d$avg_model_stats_by_fault
+brand_stats_by_age <- d$brand_stats_by_age
+fault_categories <- d$fault_categories
+years <- d$years
+ages <- d$ages
+cars <- d$cars
 
-stats <- clean_names(stats)
-names(stats)[4] <- 'main_fault_object'
-names(stats)[8:10] <- c('demand_for_repairs', 'rejections', 'driving_bans')
-
-fault_categories <- sort(unique(stats$main_fault_object))
-model_related <- c("Axles, wheels and suspension (all objects)", 
-                   "Chassis and body (all objects)",
-                   "Brake systems (all objects)",
-                   "Steering equipment (all objects)",
-                   "Environmental hazards (all objects)")
-years <- sort(unique(stats$registration_year))
-ages <- sort(unique(stats$vehicle_age))
-cars <- sort(unique(stats$brand_and_model_series))
-
-stats_model_year <- stats[main_fault_object %in% model_related, 
-                          .(fault_pct=sum(c(demand_for_repairs, rejections, driving_bans))/number_of_inspections[1],
-                            average_mileage=average_mileage[1], brand=brand[1],
-                            number_of_inspections=number_of_inspections[1]), 
-                          by=.(year_of_inspection, brand_and_model_series, registration_year)
-                          ][, .(fault_pct=round(weighted.mean(fault_pct, number_of_inspections), 3),
-                                average_mileage=as.integer(weighted.mean(average_mileage, number_of_inspections)),
-                                number_of_inspections=sum(number_of_inspections), brand=brand[1]), 
-                                by=.(brand_and_model_series, registration_year)]
-
-stats_by_fault <- stats[, .(fault_pct=sum(c(demand_for_repairs, rejections, driving_bans))/number_of_inspections[1],
-                            number_of_inspections=number_of_inspections[1],
-                            brand=brand[1],
-                            average_mileage=average_mileage),
-                          by=.(year_of_inspection, brand_and_model_series, registration_year, main_fault_object)]
-
-avg_stats_by_fault <- stats_by_fault[, .(fault_pct=weighted.mean(fault_pct, number_of_inspections),
-                                         number_of_inspections=sum(number_of_inspections)),
-                                     by=.(year_of_inspection, registration_year, main_fault_object)]
-
-stats_age <- stats[main_fault_object %in% model_related, 
-                   .(fault_pct=sum(c(demand_for_repairs, rejections, driving_bans))/number_of_inspections[1],
-                     average_mileage=average_mileage[1],
-                     number_of_inspections=number_of_inspections[1]), 
-                   by=.(year_of_inspection, brand_and_model_series, vehicle_age)
-                    ][, .(fault_pct=round(weighted.mean(fault_pct, number_of_inspections), 3),
-                          average_mileage=as.integer(weighted.mean(average_mileage, number_of_inspections)),
-                          number_of_inspections=sum(number_of_inspections)), 
-                      by=.(brand_and_model_series, vehicle_age)]
-
-brand_stats_by_age <- stats_model_year[, .(fault_pct=weighted.mean(fault_pct, number_of_inspections),
-                                         average_mileage=weighted.mean(as.numeric(average_mileage), number_of_inspections)),
-                                     by=.(brand, registration_year)
-                                     ][, .(rank=frank(fault_pct), brand=brand,
-                                       average_mileage=as.integer(average_mileage)),
-                                       by=.(registration_year)]
+# not every model was registered across the full 2002-2021 span (e.g. the
+# Mitsubishi Colt only has 2005-2010 data), so keep each model's own
+# registration-year range to adjust the slider on the model overview tab
+model_year_range <- model_stats_by_fault[, .(min_yr=min(registration_year), max_yr=max(registration_year)),
+                                          by=brand_and_model_series]
+setkey(model_year_range, brand_and_model_series)
 
 # dashboard ui
 header <- dashboardHeader(title="Car inspection statistics")
@@ -100,6 +47,8 @@ body <- dashboardBody(
                 p('For the ranking by registration year and age, as well as for the brand leaderboard, only model-related errors which cause a demand for repair is accounted for,',
                   'i.e., broken parking lights or slightly rusted brake discs do not affect the ratings.'),
                 p('As statistics are aggregated by model and fault category, some models will have over 100% fault rating. This is a necessary consequence of how the data are delivered by Traficom, and arguably the better way to present the data.'),
+                p('Data covers periodic inspections carried out in 2017-2025. Traficom changed its model naming and grouping in 2023 (e.g. splitting or merging some model variants); ',
+                  'names have been harmonized so each model forms one continuous series across all years.'),
                 p('Use the menu', icon('bars'), 'to choose which statistics to view.')
             )
         ),
@@ -137,15 +86,23 @@ body <- dashboardBody(
 ui <- dashboardPage(header, sidebar, body)
 
 # server logic
-server <- function(input, output) {
+server <- function(input, output, session) {
+    # a model's registration years can be a strict subset of the global
+    # range, so keep the slider matched to the selected model instead of
+    # silently showing an empty table
+    observeEvent(input$car_model, {
+        rng <- model_year_range[.(input$car_model)]
+        value <- if (isTRUE(input$model_reg_year >= rng$min_yr && input$model_reg_year <= rng$max_yr)) input$model_reg_year else rng$min_yr
+        updateSliderInput(session, 'model_reg_year', min=rng$min_yr, max=rng$max_yr, value=value)
+    })
     output$reg_year_table <- DT::renderDataTable({
         dt <- stats_model_year[registration_year==input$reg_year]
-        dt$fault_pct <- dt$fault_pct * 100
-                         
+        dt$fault_pct <- round(dt$fault_pct * 100, 1)
+
         names(dt) <- c('Model', 'Year', 'Fault%', 'Avg. mileage (km)', 'n', 'Brand')
         dt[,c(1,3:5)]
-    }, 
-    options=list(pageLength=200, order=list(list(1, 'asc'))), 
+    },
+    options=list(pageLength=200, order=list(list(1, 'asc'))),
     server=F, rownames=F)
 
     output$age_table <- DT::renderDataTable({
@@ -159,18 +116,14 @@ server <- function(input, output) {
     server=F, rownames=F)
     
     output$model_table <- renderTable({
-        model_dt <- stats_by_fault[brand_and_model_series==input$car_model & registration_year==input$model_reg_year]
-        avg_dt <- avg_stats_by_fault[registration_year==input$model_reg_year]
-        model_dt <- model_dt[,.(main_fault_object, fault_pct, number_of_inspections)
-                             ][, fault_pct := fault_pct * 100
-                             ][, .(model_value=weighted.mean(fault_pct, number_of_inspections)), by='main_fault_object']
-        avg_dt <- avg_dt[,.(main_fault_object, fault_pct, number_of_inspections)
-                         ][, fault_pct := fault_pct * 100
-                         ][, .(model_value=weighted.mean(fault_pct, number_of_inspections)), by='main_fault_object']
+        model_dt <- model_stats_by_fault[brand_and_model_series==input$car_model & registration_year==input$model_reg_year,
+                                          .(main_fault_object, model_value)]
+        validate(need(nrow(model_dt) > 0,
+                       sprintf('No inspections recorded for %s registered in %d.', input$car_model, input$model_reg_year)))
+        avg_dt <- avg_model_stats_by_fault[registration_year==input$model_reg_year, .(main_fault_object, avg_value)]
         model_table <- model_dt[avg_dt, on="main_fault_object"]
-        names(model_table)[3] <- 'avg_value'
-        model_table[, diff := fcase(model_value < avg_value, str_c(round(1-(model_value / avg_value), 2)*100, '% better'),
-                                    model_value >= avg_value, str_c(round(1-(avg_value / model_value), 2)*100, '% worse'))]
+        model_table[, diff := fcase(model_value < avg_value, paste0(round(1-(model_value / avg_value), 2)*100, '% better'),
+                                    model_value >= avg_value, paste0(round(1-(avg_value / model_value), 2)*100, '% worse'))]
         names(model_table) <- c('Fault type', 'This model (%)', 'Average (%)', 'This model compared to average')
         model_table
     })
