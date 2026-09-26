@@ -3,7 +3,6 @@ library(shinydashboard)
 library(DT)
 
 library(data.table)
-#library(ggplot2)
 
 # load precomputed data (see preprocess.R)
 d <- readRDS('app_data.rds')
@@ -107,7 +106,7 @@ server <- function(input, output, session) {
 
     output$age_table <- DT::renderDataTable({
         dt <- stats_age[vehicle_age==input$vehicle_age]
-        dt$fault_pct <- dt$fault_pct * 100
+        dt$fault_pct <- round(dt$fault_pct * 100, 1)
         
         names(dt) <- c('Model', 'Age', 'Fault%', 'Avg. mileage (km)', 'n')
         dt[,c(1,3:5)]

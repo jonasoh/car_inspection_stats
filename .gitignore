@@ -50,3 +50,6 @@ rsconnect/
 
 # raw Traficom source data (large; see README.md for how to fetch it)
 raw_data/
+
+# static webR/shinylive export produced by build.R
+site/
