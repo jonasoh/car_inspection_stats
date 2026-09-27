@@ -53,4 +53,3 @@ raw_data/
 
 # static webR/shinylive export produced by build.R
 site/
-app/app_data.rds
