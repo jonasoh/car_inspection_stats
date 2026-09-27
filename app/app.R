@@ -29,8 +29,8 @@ header <- dashboardHeader(title="Car inspection statistics")
 sidebar <- dashboardSidebar(
     sidebarMenu(id="sidebar", 
         menuItem("Page info", tabName="info", icon=icon("car")),
-        menuItem("By model and year", tabName="model_year", icon=icon("car")),
-        menuItem("By age", tabName="by_age", icon=icon("car")),
+        menuItem("Model by registration year", tabName="model_year", icon=icon("car")),
+        menuItem("Model by age", tabName="by_age", icon=icon("car")),
         menuItem("Car model overview", tabName="model_overview", icon=icon("car")),
         menuItem("Brand leaderboard", tabName="brand_leaderboard", icon=icon("car"))
     )
