@@ -18,6 +18,10 @@ jobs:
         with:
           packages: |
             any::shinylive
+            any::shiny
+            any::shinydashboard
+            any::DT
+            any::data.table
 
       - name: Build site
         run: Rscript build.R
