@@ -24,7 +24,7 @@ model_year_range <- model_stats_by_fault[, .(min_yr=min(registration_year), max_
 setkey(model_year_range, brand_and_model_series)
 
 # dashboard ui
-header <- dashboardHeader(title="Car inspection statistics")
+header <- dashboardHeader(title="Car Inspection Statistics")
 
 sidebar <- dashboardSidebar(
     sidebarMenu(id="sidebar", 
@@ -37,20 +37,26 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
+    tags$head(
+        tags$title('Car Inspection Statistics'),
+        tags$link(rel='icon', type='image/svg+xml', href='favicon.svg'),
+        tags$link(rel='stylesheet', type='text/css', href='custom.css')
+    ),
     tabItems(
         tabItem(tabName='info', fluidRow(
-                h1('Car inspection stats'),
-                p('This website presents Finnish car inspection stats from the', 
+            div(class='info-tab-content',
+                h1('Car Inspection Stats'),
+                p('This website presents Finnish car inspection stats from the',
                   a('Traficom Statistics Database', href='https://trafi2.stat.fi/PXWeb/pxweb/en/TraFi/TraFi__Katsastuksen_vikatilastot/?tablelist=true'),
                   'which details the results of periodic inspections for all car models with over 100 inspected cars per year.'),
-                p('For the ranking by registration year and age, as well as for the brand leaderboard, only model-related errors which cause a demand for repair is accounted for,',
+                p('For the ranking by registration year and age, as well as for the brand leaderboard, only model-related faults that cause a demand for repair are accounted for,',
                   'i.e., broken parking lights or slightly rusted brake discs do not affect the ratings.'),
                 p('As statistics are aggregated by model and fault category, some models will have over 100% fault rating. This is a necessary consequence of how the data are delivered by Traficom, and arguably the better way to present the data.'),
                 p('Data covers periodic inspections carried out in 2017-2025. Traficom changed its model naming and grouping in 2023 (e.g. splitting or merging some model variants); ',
                   'names have been harmonized so each model forms one continuous series across all years.'),
                 p('Use the menu', icon('bars'), 'to choose which statistics to view.')
             )
-        ),
+        )),
         tabItem(tabName='model_year', fluidRow(
             box('Fault stats by model and registration year',
                 sliderInput('reg_year', 'Registration year:',
