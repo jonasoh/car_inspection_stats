@@ -13,4 +13,8 @@ if (!requireNamespace('shinylive', quietly=TRUE)) {
     stop('Package "shinylive" is required. Install it with install.packages("shinylive").')
 }
 
-shinylive::export('app', 'site')
+shinylive::export(
+    'app',
+    'site',
+    template_params=list(title='Car inspection stats')
+)

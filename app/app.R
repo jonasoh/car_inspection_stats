@@ -38,7 +38,7 @@ sidebar <- dashboardSidebar(
 
 body <- dashboardBody(
     tags$head(
-        tags$title('Car Inspection Statistics'),
+        tags$title('Car inspection stats'),
         tags$link(rel='icon', type='image/svg+xml', href='favicon.svg'),
         tags$link(rel='stylesheet', type='text/css', href='custom.css')
     ),
